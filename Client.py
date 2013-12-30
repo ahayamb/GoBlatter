@@ -15,6 +15,7 @@ poin = 0
 timeout = 0
 
 def printState(state, cat):
+	
 	os.system('cls')
 	printed = ''
 	if state[0] == ' ': printed += '_ '
@@ -31,6 +32,7 @@ def printState(state, cat):
 	print '\nPoin :', poin
 
 def inputing(threadName, param):
+	
 	sntObj = {}
 	sntObj['m'] = 'ans'
 	sntObj['ch'] = ''
@@ -46,6 +48,7 @@ def inputing(threadName, param):
 			pass
 
 def updateView(threadName, param):
+	
 	global timeout
 	while True:
 		try:
@@ -56,6 +59,7 @@ def updateView(threadName, param):
 			pass
 
 def getQuestion(threadName, param):
+	
 	global running
 	global rcvObj
 	global idNow

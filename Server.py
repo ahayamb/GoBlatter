@@ -7,6 +7,7 @@ import random
 
 class ServerFIB:
 	def __init__(self):
+		
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.serverSocket.bind(('localhost', 9999))
 		self.serverSocket.listen(100)
@@ -22,6 +23,7 @@ class ServerFIB:
 		self.initWordBank()
 		
 	def initWordBank(self): 
+		
 		self.wordData[0] = ['ACHEN', 'BOJONEGORO', 'SURABAYA', 'JAKARTA', 'BANDUNG', 'SEMARANG', 'PALEMBANG', 'SERANG', 'TANGERANG', 'MAKASSAR']
 		self.wordData[1] = ['INDONESIA', 'BRAZIL', 'MALAYSIA', 'SINGAPURA', 'THAILAND', 'CHINA', 'ARGENTINA', 'JERMAN', 'BELANDA', 'VENEZUELA']
 		self.wordData[2] = ['APEL', 'NANAS', 'JERUK', 'MANGGA', 'DURIAN', 'ANGGUR', 'SIMALAKAMA', 'BUAH NAGA', 'DELIMA', 'SIRSAK']
@@ -29,6 +31,7 @@ class ServerFIB:
 		
 	
 	def runServer(self):
+		
 		thread.start_new_thread(self.listenClient, ('listenClient', 0))
 		thread.start_new_thread(self.postQuest, ('postQuest', 0))
 		
@@ -36,6 +39,7 @@ class ServerFIB:
 			pass
 	
 	def listenClient(self, threadName, param):
+		
 		while self.running:
 			try:
 				r, w, e = select.select(self.clientProperty.keys(), [], [])
@@ -120,6 +124,7 @@ class ServerFIB:
 				pass
 			
 	def postQuest(self, threadName, param):        
+		
 		while self.running: # m, state, bebas, id, timeout
 			self.timeout = 10
 			
