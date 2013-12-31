@@ -7,7 +7,7 @@ import random
 
 class GoBlatterServer:
 	
-	def __init__(self, bindParam):
+	def __init__(self, bindParam) :
 		
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.serverSocket.bind(bindParam)
@@ -23,7 +23,7 @@ class GoBlatterServer:
 		self.timeout = 3
 		self.initWordBank()
 		
-	def initWordBank(self): 
+	def initWordBank(self) :  
 		
 		self.wordData[0] = ['ACHEN', 'BOJONEGORO', 'SURABAYA', 'JAKARTA', 'BANDUNG', 'SEMARANG', 'PALEMBANG', 'SERANG', 'TANGERANG', 'MAKASSAR']
 		self.wordData[1] = ['INDONESIA', 'BRAZIL', 'MALAYSIA', 'SINGAPURA', 'THAILAND', 'CHINA', 'ARGENTINA', 'JERMAN', 'BELANDA', 'VENEZUELA']
@@ -31,37 +31,35 @@ class GoBlatterServer:
 		self.wordData[3] = ['REAL_MADRID', 'INTER_MILAN', 'BAYERN_MUENCHEN', 'CHELSEA', 'ARSENAL', 'MANCHESTER_UNITED', 'LIVERPOOL', 'ASTON_VILA']
 		
 	
-	def runServer(self):
+	def runServer(self) :
 		
 		thread.start_new_thread(self.listenClient, ('listenClient', 0))
 		thread.start_new_thread(self.postQuest, ('postQuest', 0))
 		
-		while self.running:
-			pass
+		while self.running : pass
 	
-	def listenClient(self, threadName, param):
+	def listenClient(self, threadName, param) :
 		
-		while self.running:
-			try:
+		while self.running :
+			try :
 				r, w, e = select.select(self.clientProperty.keys(), [], [])
 				
-#                 print 'Incoming request'
-				for i in r:
+				for i in r :
 					
-					if i == self.serverSocket:
+					if i == self.serverSocket :
 						dummyClt, dummyAddr = i.accept()
 						self.clientProperty[dummyClt] = ['client1', 0]
 						print 'success'
 					
-					else:
+					else :
 						rcvStr = i.recv(4096)
 						rcvObj = cPickle.loads(rcvStr)
 						
-						if rcvObj['m'] == 'in':     # m, user, res
+						if rcvObj['m'] == 'in' :     # m, user, res
 							exist = False
 							
-							for t in self.clientProperty.values():
-								if t[0] == rcvObj['user']:
+							for t in self.clientProperty.values() :
+								if t[0] == rcvObj['user'] :
 									exist = True
 									break
 							
@@ -70,7 +68,7 @@ class GoBlatterServer:
 								rcvObj['res'] = 1
 								i.sendall(cPickle.dumps(rcvObj))
 								
-								if (self.timeout > 0):
+								if (self.timeout > 0) :
 									sndObj = {}
 									sndObj['m'] = 'quest'
 									sndObj['state'] = ''
@@ -78,7 +76,7 @@ class GoBlatterServer:
 									self.currentWordCat = self.wordCat[ num ]
 									self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
 									sndObj['cat'] = self.currentWordCat
-									for i in range(len(self.currentWord)):
+									for i in range(len(self.currentWord)) :
 										sndObj['state'] += ' '
 									
 									sndObj['id'] = self.idNow
@@ -91,7 +89,7 @@ class GoBlatterServer:
 								i.sendall(cPickle.dumps(rcvObj))
 								self.clientProperty.pop(i)
 						
-						elif rcvObj['m'] == 'ans':  # m, state, ch, res, id
+						elif rcvObj['m'] == 'ans' :  # m, state, ch, res, id
 							#sndObj : m, res, state
 							# print 'yesss'
 							sndObj = {}
@@ -101,16 +99,15 @@ class GoBlatterServer:
 							newState = ''
 							if rcvObj['id'] == self.idNow and rcvObj['state'] != self.currentWord:
 								
-								if rcvObj['state'].find(rcvObj['ch']) == -1:
-									exist = False
+								if rcvObj['state'].find(rcvObj['ch']) == -1 : exist = False
 									
-									for x in range(len(self.currentWord)):
-										if self.currentWord[x] == rcvObj['ch']:
+									for x in range(len(self.currentWord)) :
+										if self.currentWord[x] == rcvObj['ch'] :
 											newState += rcvObj['ch']
 											exist = True
 										else : newState += rcvObj['state'][x]
 									
-									if exist:
+									if exist :
 										if newState == self.currentWord: sndObj['res'] = self.timeout
 										else : sndObj['res'] = 1
 									else : sndObj['res'] = -1
@@ -122,14 +119,14 @@ class GoBlatterServer:
 							else : 
 								sndObj['res'] = 0
 								newState = rcvObj['state']
+							
 							sndObj['state'] = newState
 							i.sendall(cPickle.dumps(sndObj))
-			except:
-				pass
+			except : pass
 			
-	def postQuest(self, threadName, param):        
+	def postQuest(self, threadName, param) :        
 		
-		while self.running: # m, state, bebas, id, timeout
+		while self.running : # m, state, bebas, id, timeout
 			self.timeout = 10
 			
 			#Initialize sent question
@@ -140,7 +137,7 @@ class GoBlatterServer:
 			self.currentWordCat = self.wordCat[ num ]
 			self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
 			sndObj['cat'] = self.currentWordCat
-			for i in range(len(self.currentWord)):
+			for i in range(len(self.currentWord)) :
 				if self.currentWord[i] != '_' : sndObj['state'] += ' '
 				else : sndObj['state'] += '_'
 			
@@ -149,16 +146,16 @@ class GoBlatterServer:
 			sndStr = cPickle.dumps(sndObj)
 			
 			# Sending to the clients
-			for i in self.clientProperty.keys():
-				try:
-					if i != self.serverSocket:
+			for i in self.clientProperty.keys() :
+				try :
+					if i != self.serverSocket :
 						i.sendall(sndStr)
-				except:
+				except :
 					print 'error sending to', i
 					self.clientProperty.pop(i)
 					pass
 			
-			while self.timeout > 0:
+			while self.timeout > 0 :
 				time.sleep(1)
 				self.timeout -= 1
 			

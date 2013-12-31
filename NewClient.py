@@ -118,8 +118,7 @@ class GoBlatterClient:
 						self.poin += self.rcvObj['res']
 						self.printState(self.rcvObj['state'], self.rcvObj['cat'])
 				
-				except : 
-					pass
+				except : pass
 
 	def runClient(self) :
 
