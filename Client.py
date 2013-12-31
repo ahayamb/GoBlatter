@@ -2,7 +2,9 @@ import socket
 import cPickle
 import thread
 import sys
-import os, msvcrt, time
+import os
+import msvcrt
+import time
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 clientSocket.connect(('localhost', 9999))
@@ -20,9 +22,10 @@ def printState(state, cat):
 	printed = ''
 	if state[0] == ' ': printed += '_ '
 	else : printed += (state[0] + ' ')
-		
+
 	for i in range(1, len(state)):
 		if state[i] == ' ': printed += '_ '
+		elif state[i] == '_' : printed += '   '
 		else : printed += (state[i] + ' ')
 		
 	print 'Kategori :', cat

@@ -5,11 +5,12 @@ import select
 import time
 import random
 
-class ServerFIB:
-	def __init__(self):
+class GoBlatterServer:
+	
+	def __init__(self, bindParam):
 		
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.serverSocket.bind(('localhost', 9999))
+		self.serverSocket.bind(bindParam)
 		self.serverSocket.listen(100)
 		self.clientProperty = {}
 		self.clientProperty[self.serverSocket] = ['server', 0]
@@ -27,7 +28,7 @@ class ServerFIB:
 		self.wordData[0] = ['ACHEN', 'BOJONEGORO', 'SURABAYA', 'JAKARTA', 'BANDUNG', 'SEMARANG', 'PALEMBANG', 'SERANG', 'TANGERANG', 'MAKASSAR']
 		self.wordData[1] = ['INDONESIA', 'BRAZIL', 'MALAYSIA', 'SINGAPURA', 'THAILAND', 'CHINA', 'ARGENTINA', 'JERMAN', 'BELANDA', 'VENEZUELA']
 		self.wordData[2] = ['APEL', 'NANAS', 'JERUK', 'MANGGA', 'DURIAN', 'ANGGUR', 'SIMALAKAMA', 'BUAH NAGA', 'DELIMA', 'SIRSAK']
-		self.wordData[3] = ['REAL MADRID', 'INTER MILAN', 'BAYERN MUENCHEN', 'CHELSEA', 'ARSENAL', 'MANCHESTER UNITED', 'LIVERPOOL', 'ASTON VILA']
+		self.wordData[3] = ['REAL_MADRID', 'INTER_MILAN', 'BAYERN_MUENCHEN', 'CHELSEA', 'ARSENAL', 'MANCHESTER_UNITED', 'LIVERPOOL', 'ASTON_VILA']
 		
 	
 	def runServer(self):
@@ -46,10 +47,12 @@ class ServerFIB:
 				
 #                 print 'Incoming request'
 				for i in r:
+					
 					if i == self.serverSocket:
 						dummyClt, dummyAddr = i.accept()
 						self.clientProperty[dummyClt] = ['client1', 0]
 						print 'success'
+					
 					else:
 						rcvStr = i.recv(4096)
 						rcvObj = cPickle.loads(rcvStr)
@@ -90,6 +93,7 @@ class ServerFIB:
 						
 						elif rcvObj['m'] == 'ans':  # m, state, ch, res, id
 							#sndObj : m, res, state
+							# print 'yesss'
 							sndObj = {}
 							sndObj['m'] = 'jud'
 							sndObj['res'] = 0
@@ -137,7 +141,8 @@ class ServerFIB:
 			self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
 			sndObj['cat'] = self.currentWordCat
 			for i in range(len(self.currentWord)):
-				sndObj['state'] += ' '
+				if self.currentWord[i] != '_' : sndObj['state'] += ' '
+				else : sndObj['state'] += '_'
 			
 			sndObj['id'] = self.idNow
 			sndObj['timeout'] = self.timeout
@@ -159,5 +164,5 @@ class ServerFIB:
 			
 			self.idNow += 1
 
-myServer = ServerFIB()
+myServer = GoBlatterServer(('localhost', 9999))
 myServer.runServer()
