@@ -99,7 +99,9 @@ class GoBlatterServer:
 							newState = ''
 							if rcvObj['id'] == self.idNow and rcvObj['state'] != self.currentWord:
 								
-								if rcvObj['state'].find(rcvObj['ch']) == -1 : exist = False
+								if rcvObj['state'].find(rcvObj['ch']) == -1 : 
+
+									exist = False									
 									
 									for x in range(len(self.currentWord)) :
 										if self.currentWord[x] == rcvObj['ch'] :
