@@ -109,6 +109,9 @@ class GoBlatterClient:
 						self.alive = False
 						sys.exit(0)
 
+					elif self.rcvObj['m'] == 'winmsg' :
+						print self.rcvObj['msg']
+
 					elif self.rcvObj['m'] == 'quest' :
 						self.idNow = self.rcvObj['id']
 						self.timeout = self.rcvObj['timeout']
@@ -124,7 +127,6 @@ class GoBlatterClient:
 
 		thread.start_new_thread(self.getQuestion, ('th', 0))
 		thread.start_new_thread(self.inputing, ('th1', 0))
-
 		# thread.start_new_thread(self.updateView, ('th', 0))
 
 		while self.running : pass

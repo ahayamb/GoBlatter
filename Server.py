@@ -23,6 +23,15 @@ class GoBlatterServer:
 		self.timeout = 3
 		self.initWordBank()
 		
+	def broadcastMsg(self, msg) :
+
+		sndObj = {}
+		sndObj['m'] = 'winmsg'
+		sndObj['msg'] = msg
+		for i in self.clientProperty.keys() :
+			if i != self.serverSocket :
+				i.sendall(cPickle.dumps(sndObj))
+
 	def initWordBank(self) :  
 		
 		self.wordData[0] = ['ACHEN', 'BOJONEGORO', 'SURABAYA', 'JAKARTA', 'BANDUNG', 'SEMARANG', 'PALEMBANG', 'SERANG', 'TANGERANG', 'MAKASSAR']
@@ -91,7 +100,7 @@ class GoBlatterServer:
 						
 						elif rcvObj['m'] == 'ans' :  # m, state, ch, res, id
 							#sndObj : m, res, state
-							# print 'yesss'
+							msg = ''
 							sndObj = {}
 							sndObj['m'] = 'jud'
 							sndObj['res'] = 0
@@ -110,7 +119,9 @@ class GoBlatterServer:
 										else : newState += rcvObj['state'][x]
 									
 									if exist :
-										if newState == self.currentWord: sndObj['res'] = self.timeout
+										if newState == self.currentWord : 
+											sndObj['res'] = self.timeout
+											msg = self.clientProperty[i][0] + ' berhasil menjawab'
 										else : sndObj['res'] = 1
 									else : sndObj['res'] = -1
 								
@@ -124,6 +135,9 @@ class GoBlatterServer:
 							
 							sndObj['state'] = newState
 							i.sendall(cPickle.dumps(sndObj))
+							
+							if msg != '' :
+								self.broadcastMsg(msg)
 			except : pass
 			
 	def postQuest(self, threadName, param) :        
