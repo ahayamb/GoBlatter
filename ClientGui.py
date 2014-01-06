@@ -4,16 +4,18 @@ import thread
 import socket
 import cPickle
 
-# userName = raw_input()
+userName = ''
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# clientSocket.connect(('10.151.33.2', 9999))
 clientSocket.connect(('localhost', 9999))
-userName = 'ahayamb'
 running = False
 alive = True
 rcvObj = {}
+wordState = ''
 idNow = 0
+notifLine = 0
 
-while not running:
+while not running :
 	print 'Masukkan username :'
 	userName = raw_input()
 	sntObj = {'m' : 'in', 'user' : userName, 'res' : 0}
@@ -27,12 +29,10 @@ while not running:
 
 buttonList = []
 mainForm = Tk()
-mainForm.geometry('800x400+100+200')
+mainForm.geometry('900x400+100+200')
 mainForm.title('GoBlatter Client - ' + userName)
 canvas = Canvas(mainForm, bg = '#00AAFF', width = 420, height = 150)
 canvas.place(x = 8, y = 50)
-
-nameList = ['AHMAD', 'HAYAM', 'BRILIAN']
 
 #Constants
 tX = 20
@@ -44,7 +44,7 @@ scoreVar = IntVar()				#variable bounder
 scoreVar.set(0)
 
 categoryVar = StringVar()		#variable bounder
-categoryVar.set('Unknown')
+categoryVar.set('Menunggu..')
 
 toVar = IntVar()				#variable bounder
 toVar.set(10)
@@ -66,19 +66,17 @@ notifLabel.place(x = 450, y = 35)
 
 def buttonClick(num) :
 	global idNow
+	global wordState
 	if buttonList[num].button['state'] != 'disabled' :
 		
 		buttonList[num].button['state'] = 'disabled'
-		
 		sntObj = {}
 		sntObj['m'] = 'ans'
 		sntObj['ch'] = ''
 		sntObj['id'] = idNow
 		sntObj['ch'] = buttonList[num].button['text']
-		sntObj['state'] = rcvObj['state']
+		sntObj['state'] = wordState
 		clientSocket.sendall(cPickle.dumps(sntObj))
-		
-		updateWordState(buttonList[num].button['text'])
 
 def updateWordState(word) :
 	
@@ -112,6 +110,7 @@ def getQuestion(threadName, param) :
 		global alive
 		global running
 		global buttonList
+		global wordState
 
 		while alive :
 			
@@ -128,45 +127,66 @@ def getQuestion(threadName, param) :
 
 					elif rcvObj['m'] == 'winmsg' :
 						updateNotif(rcvObj['msg'])
+						print rcvObj['msg']
 
 					elif rcvObj['m'] == 'quest' :
 						idNow = rcvObj['id']
+						wordState = rcvObj['state']
 						toVar.set(rcvObj['timeout'])
 						updateWordState(rcvObj['state'])
 						categoryVar.set(rcvObj['cat'])
 
 						for i in buttonList :
 							i.button['state'] = 'active'
-					
+						
 					elif rcvObj['m'] == 'jud' :
+						wordState = rcvObj['state']
 						scoreVar.set(scoreVar.get() + rcvObj['res'])
 						updateWordState(rcvObj['state'])
 						categoryVar.set(rcvObj['cat'])
 
-				except : pass
+				except : 
+					print 'ternyata eror'
+					pass
 
 def keyboardHandler(event) :
+	# try :
 	if event.char.islower() : buttonClick(ord(event.char.capitalize()) - 65)
 	elif event.char.isupper() : buttonClick(ord(event.char - 65))
+	# except : 
+		# print 'eror bro'
+		# pass
 
 def updateTO(threadName, param) :
 	global toVar
 	global toLabel
 	while True :
-		if running :
-			time.sleep(1)
-			if toVar.get() > 0 : toVar.set(toVar.get() - 1)
-			else : toVar.set(10)
+		try :
+			if running :
+				time.sleep(1)
+				if toVar.get() > 0 : toVar.set(toVar.get() - 1)
+				else : toVar.set(10)
 
-			if toVar.get() <= 3 : toLabel['foreground'] = '#AA0000'
-			else : toLabel['foreground'] = '#00AA22'
+				if toVar.get() <= 3 : toLabel['foreground'] = '#AA0000'
+				else : toLabel['foreground'] = '#00AA22'
+		except :
+			pass
 
 def updateNotif(text) :
-	global notifVar
-	global notifLabel
-	global toVar
-	if notifVar.get() == '' : notifVar.set('- ' + text)
-	else : notifVar.set(notifVar.get() + '\n- ' + text)
+	try :
+		global notifVar
+		global notifLabel
+		global toVar
+		global notifLine
+		if notifVar.get() == '' : notifVar.set('- ' + text)
+		else : 
+			if notifLine < 6 : 
+				notifVar.set(notifVar.get() + '\n- ' + text)
+				notifLine += 1
+			else :
+				s = notifVar.get()
+				notifVar.set(s[s.find('\n') + 1 : ] + '\n- ' + text)
+	except : pass
 
 class GoButton :
 	def __init__(self, num, px, py, master) :
