@@ -150,12 +150,10 @@ def getQuestion(threadName, param) :
 					pass
 
 def keyboardHandler(event) :
-	# try :
-	if event.char.islower() : buttonClick(ord(event.char.capitalize()) - 65)
-	elif event.char.isupper() : buttonClick(ord(event.char - 65))
-	# except : 
-		# print 'eror bro'
-		# pass
+	try :
+		if event.char.islower() : buttonClick(ord(event.char.capitalize()) - 65)
+		elif event.char.isupper() : buttonClick(ord(event.char - 65))
+	except : pass
 
 def updateTO(threadName, param) :
 	global toVar
