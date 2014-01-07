@@ -13,7 +13,7 @@ class GoBlatterServer:
 		self.serverSocket.bind(bindParam)
 		self.serverSocket.listen(100)
 		self.clientProperty = {}
-		self.clientProperty[self.serverSocket] = ['server', 0, False]
+		self.clientProperty[self.serverSocket] = ['server', 0, True]
 		self.duelRoom = []
 		self.running = True
 		self.currentWord = ''
@@ -42,51 +42,26 @@ class GoBlatterServer:
 		self.wordData[3] = ['REAL_MADRID', 'INTER_MILAN', 'BAYERN_MUENCHEN', 'CHELSEA', 'ARSENAL', 'MANCHESTER_UNITED', 'LIVERPOOL', 'ASTON_VILA']
 		
 	def duelHandler(self, threadName, param) :
-
-		while self.running :
-			
-			if len(self.duelRoom) > 0 : time.sleep(1)
-
-			for i in range(len(self.duelRoom)) :
-				
-				if self.duelRoom[i][4] > 0 : self.duelRoom[i][4] -= 1
-
-				else :
-					
-					sndObj = {'m' : 'duelquest', 'state' : '', 'room' : i, 'cat' : ''}
-					num = random.randrange(0, len(self.wordCat))
-					self.duelRoom[i][4] = self.wordCat[ num ]
-					sndObj['cat'] = self.duelRoom[i][4]
-					self.duelRoom[i][5] = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
-					sndObj['cat'] = self.duelRoom[i][5]
-					
-					for it in range(len(self.duelRoom[i][5])) :
-						if self.duelRoom[i][5][it] != '_' : sndObj['state'] += ' '
-						else : sndObj['state'] += '_'
-
-					sntStr = cPickle.dumps(sndObj)
-
-					self.duelRoom[i][0].sendall(sntStr)
-					self.duelRoom[i][1].sendall(sntStr)
-
-					self.duelRoom[i][4] = 10
+		pass
 
 	def runServer(self) :
 		
 		# thread.start_new_thread(self.listenClient, ('listenClient', 0))
 
 		thread.start_new_thread(self.postQuest, ('postQuest', 0))
+		thread.start_new_thread(self.duelHandler, ('duelHandler', 0))
 		self.listenClient('listenClient', 0)
 		
-		# while self.running : pass
 	
 	def listenClient(self, threadName, param) :
 		
 		while self.running :
 			try :
+			# if 1 == 1 :
 				errorConn = False
+				temp = self.serverSocket
 				r, w, e = select.select(self.clientProperty.keys(), [], [])
-					
+			
 				for i in r :
 		
 					if i == self.serverSocket :
@@ -95,7 +70,9 @@ class GoBlatterServer:
 						print 'success'
 					
 					else :
+						temp = i
 						rcvStr = i.recv(4096)
+						errorConn = True
 						rcvObj = cPickle.loads(rcvStr)
 						
 						if rcvObj['m'] == 'in' :     # m, user, res
@@ -107,11 +84,12 @@ class GoBlatterServer:
 									break
 							
 							if not exist: 
+								print rcvObj['user']
 								self.clientProperty[i][0] = rcvObj['user']
 								rcvObj['res'] = 1
 								i.sendall(cPickle.dumps(rcvObj))
 									
-								if (self.timeout > 0) :
+								if self.timeout > 0 :
 									sndObj = {}
 									sndObj['m'] = 'quest'
 									sndObj['state'] = ''
@@ -128,20 +106,19 @@ class GoBlatterServer:
 									sndObj['timeout'] = self.timeout
 									i.sendall(cPickle.dumps(sndObj))
 								
-							
 							else:
 								rcvObj['res'] = 0
 								i.sendall(cPickle.dumps(rcvObj))
 								self.clientProperty.pop(i)
 							
 						elif rcvObj['m'] == 'ans' :  # m, state, ch, res, id
-							#sndObj : m, res, state
+							#sndObj : m, res, cat, state, room
 							sndObj = {}
 							sndObj['m'] = 'jud'
 							sndObj['res'] = 0
 							sndObj['cat'] = self.currentWordCat
 							newState = ''
-							# print self.clientProperty[i]
+							
 							if rcvObj['id'] == self.idNow and rcvObj['state'] != self.currentWord:
 									
 								if rcvObj['state'].find(rcvObj['ch']) == -1 : 
@@ -172,34 +149,53 @@ class GoBlatterServer:
 							sndObj['state'] = newState
 							i.sendall(cPickle.dumps(sndObj))
 
-						elif rcvObj['m'] == 'duelreq' : # m : duelreq, from : dueler, to : dueled
+						elif rcvObj['m'] == 'list' :
+							clientList = []
 							for tt in self.clientProperty :
-								if self.clientProperty[tt] == rcvObj['to'] :
-									tt.sendall(rcvStr)
+								if not self.clientProperty[tt][2] : clientList.append(self.clientProperty[tt][0])
+							i.sendall(cPickle.dumps({'m' : 'list', 'client' : clientList}))
+							print cPickle.dumps({'m' : 'list', 'client' : clientList})
+
+						elif rcvObj['m'] == 'duelreq' : # m : duelreq, from : dueler, to : dueled
+							self.clientProperty[i][2] = True
+							
+							for tt in self.clientProperty :
+								if self.clientProperty[tt][0] == rcvObj['to'] :
+									if not self.clientProperty[tt][2] :
+										self.clientProperty[tt][2] = True
+										tt.sendall(rcvStr)
+									else :
+										tt.sendall(cPickle.dumps({'m' : 'duelans', 'from' : rcvObj['from'], 'to' : rcvObj['to'], 'ans' : 0}))
+										self.clientProperty[tt][2] = False
+										self.clientProperty[i][2] = False
 									break
 
 						elif rcvObj['m'] == 'duelans' : # m : duelans, from : dueler, to : dueled, ans : 1 / 0
 							if rcvObj['ans'] == 1 :
 								for tt in self.clientProperty :
 									if self.clientProperty[tt][0] == rcvObj['from'] :
-										self.duelRoom.append([i, tt, 0, 0, 0, 'cat', 'word'])	# player1, player2, score1, score2, timeout, word
 										self.clientProperty[i][2] = True
 										self.clientProperty[tt][2] = True
 										tt.sendall(rcvStr)
 										break
+								'create room'
 							else :
+								self.clientProperty[i][2] = False
 								for tt in self.clientProperty :
 									if self.clientProperty[tt][0] == rcvObj['from'] :
+										self.clientProperty[tt][2] = False
 										tt.sendall(rcvStr)
 
 						elif rcvObj['m'] == 'duelcancel' :
+							self.clientProperty[i][2] = False
 							for tt in self.clientProperty :
 								if self.clientProperty[tt][0] == rcvObj['to'] :
 									tt.sendall(rcvStr)
+									self.clientProperty[tt][2] = False
 									break
 
 			except : 
-				print 'error di sini kaka'
+				if not errorConn : self.clientProperty.pop(temp)
 				pass
 			
 	def postQuest(self, threadName, param) :        
@@ -226,7 +222,7 @@ class GoBlatterServer:
 			# Sending to the clients
 			for i in self.clientProperty.keys() :
 				try :
-					if i != self.serverSocket and not self.clientProperty[i][2] :
+					if i != self.serverSocket and not self.clientProperty[i][2] and self.clientProperty[i][0] != 'client1' :
 						i.sendall(sndStr)
 				except :
 					print 'error sending to', i
