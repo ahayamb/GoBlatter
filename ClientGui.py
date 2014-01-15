@@ -3,6 +3,7 @@ import time
 import thread
 import socket
 import cPickle
+import msvcrt
 
 userName = ''
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -14,6 +15,8 @@ rcvObj = {}
 wordState = ''
 idNow = 0
 notifLine = 0
+idduel = ''
+password = ''
 
 challenging = False
 challenged = False
@@ -22,10 +25,18 @@ onDuel = False
 objDuelReq = {}
 
 while not running :
-	print 'Masukkan username :'
+	print 'Username : '
 	userName = raw_input()
-	sntObj = {'m' : 'in', 'user' : userName, 'res' : 0}
+	print 'Password : '
+	a = ''
+	while True :
+		a = msvcrt.getch()
+		if ord(a) == 13 : break
+		password += a
+	sntObj = {'m' : 'in', 'user' : userName, 'res' : 0, 'pass' : password}
+	# print sntObj
 	clientSocket.sendall(cPickle.dumps(sntObj))
+	# print 'terkirimaaaa'
 
 	rcvStr = clientSocket.recv(4096)
 	rcvObjs = cPickle.loads(rcvStr)
@@ -80,7 +91,7 @@ duelNotif = Label(text = 'Tidak ada permintaan', font = ('Consolas', 15), foregr
 duelNotif.place(x = 450, y = 180)
 
 duelTimer = Label(textvariable = waitVar, font = ('Consolas', 15), foreground = '#FF0000', justify = LEFT)
-duelTimer.place(x = 800, y = 180)
+duelTimer.place(x = 875, y = 180)
 
 duelButton = Button(mainForm, text = 'Duel')
 cancelButton = Button(mainForm)
@@ -95,15 +106,25 @@ noButton['state'] = 'disabled'
 def buttonClick(num) :
 	global idNow
 	global wordState
+	global idduel
 	if buttonList[num].button['state'] != 'disabled' :
 		
 		buttonList[num].button['state'] = 'disabled'
 		sntObj = {}
-		sntObj['m'] = 'ans'
-		sntObj['ch'] = ''
-		sntObj['id'] = idNow
-		sntObj['ch'] = buttonList[num].button['text']
-		sntObj['state'] = wordState
+		
+		if not onDuel :
+			sntObj['m'] = 'ans'
+			sntObj['ch'] = ''
+			sntObj['id'] = idNow
+			sntObj['ch'] = buttonList[num].button['text']
+			sntObj['state'] = wordState
+		else :
+			sntObj['m'] = 'duelquestans'
+			sntObj['idduel'] = idduel
+			sntObj['idquest'] = idNow
+			sntObj['ch'] = buttonList[num].button['text']
+			sntObj['state'] = wordState
+			print sntObj
 		clientSocket.sendall(cPickle.dumps(sntObj))
 
 def passiveTimer(threadName, param) :
@@ -113,23 +134,36 @@ def passiveTimer(threadName, param) :
 	global clientSocket
 	global objDuelReq
 	global duelNotif
+	global onDuel
+	global idduel
+	global yesButton
+	global noButton
 	waitVar.set(0)
 
 	while waitVar.get() < 10 and challenged :
 		time.sleep(1)
 		waitVar.set( waitVar.get() + 1 )
 
+	print 'challenged ' + str(challenged)
 	if challenged : 
 		challenged = False
 		clientSocket.sendall(cPickle.dumps({'m' : 'duelans', 'to' : objDuelReq['to'], 'from' : objDuelReq['from'], 'ans' : 0}))
+		duelNotif['text'] = 'Tidak ada permintaan'
+		yesButton['state'] = 'disabled'
+		noButton['state'] = 'disabled'
+		waitVar.set(0)
+
 	else :
 		if answertoDuel : 
 			clientSocket.sendall(cPickle.dumps({'m' : 'duelans', 'to' : objDuelReq['to'], 'from' : objDuelReq['from'], 'ans' : 1}))
+			onDuel = True
 			duelNotif['text'] = 'duel dimulai, be prepared'
+			idduel = objDuelReq['from'] + objDuelReq['to']
 		else : 
 			clientSocket.sendall(cPickle.dumps({'m' : 'duelans', 'to' : objDuelReq['to'], 'from' : objDuelReq['from'], 'ans' : 0}))
 			duelNotif['text'] = 'Tidak ada permintaan'
-			print 'di pasif timer'
+			idduel = ''
+			# print 'di pasif timer'
 
 	waitVar.set(0)
 
@@ -175,11 +209,14 @@ def getQuestion(threadName, param) :
 		global yesButton
 		global noButton
 		global answertoDuel
+		global idduel
+		global onDuel
 
 		while alive :
 			
 			if running :
-				try:
+				# try:
+				if True :
 					rcvStr = clientSocket.recv(4096)
 					rcvObj = cPickle.loads(rcvStr)
 
@@ -215,23 +252,29 @@ def getQuestion(threadName, param) :
 						thread.start_new_thread(passiveTimer, ('threadName', 0))
 
 					elif rcvObj['m'] == 'duelans' :
+						print rcvObj
 						yesButton['state'] = 'disabled'
 						noButton['state'] = 'disabled'
+						
 						if rcvObj['ans'] == 1 : 
 							duelNotif['text'] = 'duel dimulai, be prepared'
-							challenged = False
-
 							onDuel = True
+							print 'perubahan'
+							print onDuel
+							challenged = False
+							# challenging = False #Terakhir
+							idduel = rcvObj['from'] + rcvObj['to']
 
 						else : 
 							duelNotif['text'] = 'Tidak ada permintaan'
 							print 'di terima duelans'
 							challenging = False
 							challenged = False
+							print 'yeyeyeyyeyeyeyeyeyeyeyeye'
 							onDuel = False
 
 					elif rcvObj['m'] == 'duelcancel' :
-						print rcvObj
+						# print rcvObj
 						yesButton['state'] = 'disabled'
 						noButton['state'] = 'disabled'
 						answertoDuel = False
@@ -239,7 +282,37 @@ def getQuestion(threadName, param) :
 						duelNotif['text'] = 'Tidak ada permintaan'
 						print 'di duelcancel'
 
-					elif rcvObj['m'] == 'winmsg' : updateNotif(rcvObj['msg'])
+					elif rcvObj['m'] == 'winmsg' :
+						updateNotif(rcvObj['msg'])
+
+					elif rcvObj['m'] == 'duellosemsg' :
+						duelNotif['text'] = 'Tidak ada permintaan'
+						updateNotif(rcvObj['msg'])
+						updateNotif('Menyambungkan ke channel utama....')
+						scoreVar.set(scoreVar.get() + rcvObj['poin'])
+						onDuel = False
+						challenging = False
+						challenged = False
+
+
+					elif rcvObj['m'] == 'duelwinmsg' :
+						duelNotif['text'] = 'Tidak ada permintaan'
+						updateNotif(rcvObj['msg'])
+						updateNotif('Menyambungkan ke channel utama....')
+						scoreVar.set(scoreVar.get() + rcvObj['poin'])
+						onDuel = False
+						challenging = False
+						challenged = False
+
+					elif rcvObj['m'] == 'duelquest' :
+						idNow = rcvObj['idquest']
+						wordState = rcvObj['state']
+						toVar.set(10)
+						updateWordState(rcvObj['state'])
+						categoryVar.set(rcvObj['cat'])
+
+						for i in buttonList :
+							i.button['state'] = 'active'
 
 					elif rcvObj['m'] == 'quest' :
 						idNow = rcvObj['id']
@@ -257,23 +330,30 @@ def getQuestion(threadName, param) :
 						updateWordState(rcvObj['state'])
 						categoryVar.set(rcvObj['cat'])
 
-				except : 
-					clientSocket.close()
-					mainForm.destroy()
-					exit(10)
-					pass
+					elif rcvObj['m'] == 'dueljud' :
+						wordState = rcvObj['state']
+						updateWordState(rcvObj['state'])
+						categoryVar.set(rcvObj['cat'])
+
+				# except : 
+				# 	clientSocket.close()
+				# 	mainForm.destroy()
+				# 	exit(10)
+				# 	pass
 
 def keyboardHandler(event) :
-	try :
+	# try :
+	if True :
 		if event.char.islower() : buttonClick(ord(event.char.capitalize()) - 65)
 		elif event.char.isupper() : buttonClick(ord(event.char - 65))
-	except : pass
+	# except : pass
 
 def updateTO(threadName, param) :
 	global toVar
 	global toLabel
 	while True :
-		try :
+		# try :
+		if True :
 			if running :
 				time.sleep(1)
 				if toVar.get() > 0 : toVar.set(toVar.get() - 1)
@@ -282,10 +362,11 @@ def updateTO(threadName, param) :
 					toLabel['foreground'] = '#00AA22'
 
 				if toVar.get() <= 3 : toLabel['foreground'] = '#AA0000'
-		except : pass
+		# except : pass
 
 def updateNotif(text) :
-	try :
+	# try :
+	if True :
 		global notifVar
 		global notifLabel
 		global toVar
@@ -298,7 +379,7 @@ def updateNotif(text) :
 			else :
 				s = notifVar.get()
 				notifVar.set(s[s.find('\n') + 1 : ] + '\n- ' + text)
-	except : pass
+	# except : pass
 
 class GoButton :
 	def __init__(self, num, px, py, master) :
@@ -364,15 +445,20 @@ def activeTimer(threadName, param) :
 	global playerList
 	global clientSocket
 	global duelNotif
+	global onDuel
 	waitVar.set(0)
 
 	while waitVar.get() < 10 and challenging :
 		time.sleep(1)
 		waitVar.set( waitVar.get() + 1 )
 
-	if challenging : 
+	print onDuel
+	if challenging and not onDuel :
 		challenging = False
-	else : 
+		cancelButton['state'] = 'disabled'
+		duelButton['state'] = 'active'
+		playerList['state'] = 'normal'
+	elif challenging == False and onDuel == False :
 		print 'masuk sini'
 		clientSocket.sendall(cPickle.dumps({'m' : 'duelcancel', 'to' : playerList.get(playerList.curselection(), last = None), 'from' : userName}))
 
@@ -387,6 +473,7 @@ def duelPlayer() :
 	global playerList
 	global yesButton
 	global noButton
+	global onDuel
 
 	if not challenged and not onDuel :
 		duelButton['state'] = 'disabled'
@@ -440,6 +527,7 @@ def rejDuel() :
 	challenged = False
 	challenging = False
 	answertoDuel = False
+	print 'hahahahahahahahhahahahahha'
 	onDuel = False
 	yesButton['state'] = 'disabled'
 	noButton['state'] = 'disabled'
