@@ -5,7 +5,6 @@ import socket
 import cPickle
 import msvcrt
 from PIL import ImageTk, Image
-import Tix
 
 userName = ''
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)		# enable ini
@@ -55,8 +54,6 @@ while not running :
 
 buttonList = []
 mainForm = Tk()
-
-ballons = Tix.Balloon(mainForm)
 
 bgImage = ImageTk.PhotoImage(Image.open("GoBlatter.jpg"))
 Label(mainForm, image = bgImage).pack(fill = "both", expand = "no")
@@ -578,7 +575,5 @@ thread.start_new_thread(getQuestion, ('th', 0))
 
 mainForm.bind("<Key>", keyboardHandler)
 mainForm.focus_set()
-
-ballons.bind_widget(refreshButton, balloonmsg = 'Okedeh')
 
 mainForm.mainloop()
