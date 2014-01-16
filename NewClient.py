@@ -7,9 +7,12 @@ import msvcrt
 from PIL import ImageTk, Image
 
 userName = ''
+serverHost = ''
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)		# enable ini
 # clientSocket.connect(('10.151.33.2', 9999))
-clientSocket.connect(('localhost', 9999))		# enable ini
+print 'Server Host :'
+serverHost = raw_input()
+clientSocket.connect((serverHost, 9999))		# enable ini
 running = False
 alive = True
 rcvObj = {}
@@ -398,7 +401,7 @@ def updateNotif(text) :
 		global notifLine
 		if notifVar.get() == '' : notifVar.set('- ' + text)
 		else : 
-			if notifLine < 6 : 
+			if notifLine < 10 : 
 				notifVar.set(notifVar.get() + '\n- ' + text)
 				notifLine += 1
 			else :

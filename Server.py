@@ -17,12 +17,13 @@ class GoBlatterServer:
 		# if True :
 		except : 
 			self.userDB.commit()
-			print 'tabel sudah ada'
+			# print 'tabel sudah ada'
 			pass
-		print 'terconstruct'
+		# print 'terconstruct'
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.serverSocket.bind(bindParam)
 		self.serverSocket.listen(100)
+		print 'Listen succesfully on LOCALHOST : 9999'
 		self.clientProperty = {}
 		self.clientProperty[self.serverSocket] = ['server', 0, True]
 		self.duelRoom = {}
@@ -83,7 +84,7 @@ class GoBlatterServer:
 						self.duelRoom[i]['cat'] = self.wordCat[ num ]
 						self.duelRoom[i]['word'] = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ]
 						
-						print i + ' ' + str(self.duelRoom[i]['idquest']) + ' ' + self.duelRoom[i]['word']
+						# print i + ' ' + str(self.duelRoom[i]['idquest']) + ' ' + self.duelRoom[i]['word']
 						
 						sndObj = {'m' : 'duelquest', 'state' : '', 'cat' : self.duelRoom[i]['cat'], 'idquest' : self.duelRoom[i]['idquest']}
 						
@@ -151,14 +152,14 @@ class GoBlatterServer:
 								query = "select * from USER where username = '" + rcvObj['user'] + "' and password = '" + rcvObj['pass'] + "'"
 								result = self.userDB.execute(query).fetchall()
 								if len(result) == 0 :
-									print 'tidak ada'
+									# print 'tidak ada'
 									self.userDB.execute("insert into USER values ('" + rcvObj['user'] +"', '" + rcvObj['pass'] + "', 0)")
 									self.userDB.commit()
 									rcvObj['res'] = 0
 									rcvObj['msg'] = 'Sukses terdaftar dengan USERNAME ' + rcvObj['user'] + " dengan PASSWORD = " + rcvObj['pass'] + " ..."
 									i.sendall(cPickle.dumps(rcvObj))
 								else :
-									print 'ada'
+									# print 'ada'
 									self.clientProperty[i][0] = rcvObj['user']
 									self.clientProperty[i][1] = result[0][2]
 									rcvObj['res'] = 1
@@ -315,7 +316,7 @@ class GoBlatterServer:
 			except : 
 				if not errorConn : 
 					self.userDB.execute("update USER set POIN = " + str(self.clientProperty[temp][1]) + " where username = '" + self.clientProperty[temp][0] + "'")
-					print 'ERROR KAKAKAKAKAKAKAKAKAKAKA' + str(self.clientProperty[temp][1])
+					# print 'ERROR KAKAKAKAKAKAKAKAKAKAKA' + str(self.clientProperty[temp][1])
 					self.userDB.commit()
 					self.clientProperty.pop(temp)
 				# print 'jan'
@@ -335,7 +336,7 @@ class GoBlatterServer:
 			self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
 			sndObj['cat'] = self.currentWordCat
 
-			print self.currentWord
+			# print self.currentWord
 			
 			for i in range(len(self.currentWord)) :
 				if self.currentWord[i] != '_' : sndObj['state'] += ' '
@@ -352,7 +353,7 @@ class GoBlatterServer:
 						i.sendall(sndStr)
 
 				except :
-					print 'error sending to', i
+					# print 'error sending to', i
 					self.clientProperty.pop(i)
 					pass
 			
@@ -363,5 +364,7 @@ class GoBlatterServer:
 			self.idNow += 1
 
 # myServer = GoBlatterServer(('10.151.33.2', 9999))
-myServer = GoBlatterServer(('localhost', 9999))
+print 'Host : '
+host = raw_input()
+myServer = GoBlatterServer((host, 9999))
 myServer.runServer()
