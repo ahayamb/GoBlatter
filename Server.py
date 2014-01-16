@@ -4,11 +4,22 @@ import cPickle
 import select
 import time
 import random
+import sqlite3
 
 class GoBlatterServer:
 	
 	def __init__(self, bindParam) :
 		
+		self.userDB = sqlite3.connect('user.db')
+		# if True :
+		try : 
+			self.userDB.execute("create table USER (username TEXT, password TEXT, poin INT)")
+		# if True :
+		except : 
+			self.userDB.commit()
+			print 'tabel sudah ada'
+			pass
+		print 'terconstruct'
 		self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.serverSocket.bind(bindParam)
 		self.serverSocket.listen(100)
@@ -56,9 +67,13 @@ class GoBlatterServer:
 						if self.duelRoom[i]['sc1'] == 10 :
 							self.duelRoom[i]['p1'].sendall(cPickle.dumps({'m' : 'duelwinmsg', 'poin' : 50, 'msg' : 'ANDA MENANG DUEL MELAWAN ' + name2}))
 							self.duelRoom[i]['p2'].sendall(cPickle.dumps({'m' : 'duellosemsg', 'poin': -50,   'msg' : 'ANDA KALAH DUEL MELAWAN ' + name1}))
+							self.clientProperty[self.duelRoom[i]['p1']][1] += 50
+							self.clientProperty[self.duelRoom[i]['p2']][1] -= 50
 						else :
 							self.duelRoom[i]['p1'].sendall(cPickle.dumps({'m' : 'duellosemsg', 'poin' : -50, 'msg' : 'ANDA KALAH DUEL MELAWAN ' + name2}))
 							self.duelRoom[i]['p2'].sendall(cPickle.dumps({'m' : 'duelwinmsg', 'poin' : 50, 'msg' : 'ANDA MENANG DUEL MELAWAN ' + name1}))
+							self.clientProperty[self.duelRoom[i]['p2']][1] += 50
+							self.clientProperty[self.duelRoom[i]['p1']][1] -= 50
 						deleted.append(i)
 
 					elif self.duelRoom[i]['to'] <= 0 and self.duelRoom[i]['sc1'] != 10 and self.duelRoom[i]['sc2'] != 10 :
@@ -125,37 +140,56 @@ class GoBlatterServer:
 						
 						if rcvObj['m'] == 'in' :     # m, user, res
 							exist = False
+							existOnDB = False
 							
 							for t in self.clientProperty.values() :
 								if t[0] == rcvObj['user'] :
 									exist = True
 									break
 							
-							if not exist: 
-								# print rcvObj['user']
-								self.clientProperty[i][0] = rcvObj['user']
-								rcvObj['res'] = 1
-								i.sendall(cPickle.dumps(rcvObj))
-									
-								if self.timeout > 0 :
-									sndObj = {}
-									sndObj['m'] = 'quest'
-									sndObj['state'] = ''
-									num = random.randrange(0, len(self.wordCat))
-									self.currentWordCat = self.wordCat[ num ]
-									self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
-									sndObj['cat'] = self.currentWordCat
-									
-									for x in range(len(self.currentWord)) :
-										if self.currentWord[x] != '_' : sndObj['state'] += ' '
-										else : sndObj['state'] += '_'
+							if not exist : 
+								query = "select * from USER where username = '" + rcvObj['user'] + "' and password = '" + rcvObj['pass'] + "'"
+								result = self.userDB.execute(query).fetchall()
+								if len(result) == 0 :
+									print 'tidak ada'
+									self.userDB.execute("insert into USER values ('" + rcvObj['user'] +"', '" + rcvObj['pass'] + "', 0)")
+									self.userDB.commit()
+									rcvObj['res'] = 0
+									rcvObj['msg'] = 'Sukses terdaftar dengan USERNAME ' + rcvObj['user'] + " dengan PASSWORD = " + rcvObj['pass'] + " ..."
+									i.sendall(cPickle.dumps(rcvObj))
+								else :
+									print 'ada'
+									self.clientProperty[i][0] = rcvObj['user']
+									self.clientProperty[i][1] = result[0][2]
+									rcvObj['res'] = 1
+									rcvObj['msg'] = "SUKSES LOGIN dg USERNAME : " + rcvObj['user']
+									rcvObj['poin'] = result[0][2]
+									i.sendall(cPickle.dumps(rcvObj))
 
-									sndObj['id'] = self.idNow
-									sndObj['timeout'] = self.timeout
-									i.sendall(cPickle.dumps(sndObj))
+								# self.clientProperty[i][0] = rcvObj['user']
+								# rcvObj['res'] = 1
+								# i.sendall(cPickle.dumps(rcvObj))
+									
+									if self.timeout > 0 :
+										sndObj = {}
+										sndObj['m'] = 'quest'
+										sndObj['state'] = ''
+										num = random.randrange(0, len(self.wordCat))
+										self.currentWordCat = self.wordCat[ num ]
+										self.currentWord = self.wordData[ num ][ random.randrange(0, len(self.wordData[num])) ] 
+										sndObj['cat'] = self.currentWordCat
+										
+										for x in range(len(self.currentWord)) :
+											if self.currentWord[x] != '_' : sndObj['state'] += ' '
+											else : sndObj['state'] += '_'
+
+										sndObj['id'] = self.idNow
+										sndObj['timeout'] = self.timeout
+										i.sendall(cPickle.dumps(sndObj))
 								
 							else:
 								rcvObj['res'] = 0
+								rcvObj['msg'] = 'USER SEDANG AKTIF....'
 								i.sendall(cPickle.dumps(rcvObj))
 								# self.clientProperty.pop(i)
 							
@@ -205,10 +239,15 @@ class GoBlatterServer:
 									if exist :
 										if newState == self.currentWord : 
 											sndObj['res'] = self.timeout
-											msg = self.clientProperty[i][0] + ' berhasil menjawab mendapat poin ' + str(self.timeout)
+											self.clientProperty[i][1] += sndObj['res']
+											msg = self.clientProperty[i][0] + ' + ' + str(self.timeout) + ' poin'
 											self.broadcastMsg(msg)
-										else : sndObj['res'] = 1
-									else : sndObj['res'] = -1
+										else : 
+											sndObj['res'] = 1
+											self.clientProperty[i][1] += 1
+									else : 
+										sndObj['res'] = -1
+										self.clientProperty[i][1] -= 1
 									
 								else : 
 									sndObj['res'] = 0
@@ -274,7 +313,11 @@ class GoBlatterServer:
 									break
 
 			except : 
-				if not errorConn : self.clientProperty.pop(temp)
+				if not errorConn : 
+					self.userDB.execute("update USER set POIN = " + str(self.clientProperty[temp][1]) + " where username = '" + self.clientProperty[temp][0] + "'")
+					print 'ERROR KAKAKAKAKAKAKAKAKAKAKA' + str(self.clientProperty[temp][1])
+					self.userDB.commit()
+					self.clientProperty.pop(temp)
 				# print 'jan'
 				pass
 			

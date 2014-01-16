@@ -17,6 +17,7 @@ idNow = 0
 notifLine = 0
 idduel = ''
 password = ''
+tpoin = 0
 
 challenging = False
 challenged = False
@@ -29,6 +30,7 @@ while not running :
 	userName = raw_input()
 	print 'Password : '
 	a = ''
+	password = ''
 	while True :
 		a = msvcrt.getch()
 		if ord(a) == 13 : break
@@ -40,9 +42,13 @@ while not running :
 
 	rcvStr = clientSocket.recv(4096)
 	rcvObjs = cPickle.loads(rcvStr)
-				
-	if rcvObjs['m'] == 'in' and rcvObjs['res'] == 1 : running = True
-	else : print 'Username tidak tersedia'
+	
+	if rcvObjs['m'] == 'in' and rcvObjs['res'] == 1 : 
+		running = True
+		poin = rcvObjs['poin']
+		print rcvObjs['msg']
+	elif rcvObjs['m'] == 'in' and rcvObjs['res'] == 0 : 
+		print rcvObjs['msg']
 
 buttonList = []
 mainForm = Tk()
@@ -61,7 +67,7 @@ tW = 35
 tH = 40
 
 scoreVar = IntVar()				#variable bounder
-scoreVar.set(0)
+scoreVar.set(poin)
 
 categoryVar = StringVar()		#variable bounder
 categoryVar.set('Menunggu..')
